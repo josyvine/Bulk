@@ -11,7 +11,8 @@ android {
 
   defaultConfig {
     applicationId = "com.bulk.app"
-    minSdk = 24
+    // minSdk set to 26 for runtime InMemoryDexClassLoader support
+    minSdk = 26
     targetSdk = 36
     versionCode = 1
     versionName = "1.0"
@@ -64,8 +65,9 @@ android {
 
   buildTypes {
     release {
-      isCrunchPngs = false
-      isMinifyEnabled = false
+      isCrunchPngs = true
+      isMinifyEnabled = true
+      isShrinkResources = true
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
       signingConfig = signingConfigs.getByName("release")
     }
@@ -87,7 +89,11 @@ android {
     buildConfig = true
   }
 
-  testOptions { unitTests { isIncludeAndroidResources = true } }
+  testOptions {
+    unitTests {
+      isIncludeAndroidResources = true
+    }
+  }
 }
 
 dependencies {
