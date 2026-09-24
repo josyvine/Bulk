@@ -18,7 +18,7 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      # FIX 1: Safely pass the secret via 'env' and validate it is not empty
+      # 1. Decode Keystore from Base64 secret
       - name: Decode Keystore
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 || vars.KEYSTORE_BASE64 }}
@@ -35,11 +35,10 @@ jobs:
           fi
           echo "Keystore successfully decoded. Size: $(wc -c < ${{ github.workspace }}/safevoice.jks) bytes"
 
-      # FIX 2: Safeguard the printing step so empty environment credentials don't hang the runner
-      # Updated the default alias fallback from 'viaro' to your correct alias 'fastgit'
+      # 2. Print SHA Fingerprints (using default alias 'bulk')
       - name: Print Keystore SHA Fingerprints
         env:
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS || vars.KEY_ALIAS || 'fastgit' }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS || vars.KEY_ALIAS || 'bulk' }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD || vars.KEYSTORE_PASSWORD }}
         run: |
           if [ -z "$KEYSTORE_PASSWORD" ]; then
@@ -51,21 +50,21 @@ jobs:
             -alias "$KEY_ALIAS" \
             -storepass "$KEYSTORE_PASSWORD"
 
-      # Setup a modern version of Gradle on the virtual runner machine compatible with AGP 9.1.1
+      # 3. Setup Gradle
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: 9.3.1
 
-      # Generate a fresh, uncorrupted Gradle wrapper binary using Gradle 9.3.1
+      # 4. Generate fresh Gradle Wrapper
       - name: Regenerate Gradle Wrapper
         run: gradle wrapper
 
-      # Grant execute permission to the Gradle wrapper script to resolve permission denied error
+      # 5. Grant execute permission to wrapper
       - name: Make Gradlew Executable
         run: chmod +x gradlew
 
-      # --- OPENSLL AES-256 IN-MEMORY PAYLOAD ENCRYPTION STEP ---
+      # 6. Payload DEX Compilation and AES-256 Encryption
       - name: Build and Encrypt Core Payload
         env:
           PAYLOAD_PASSPHRASE: "FastGit_Master_Secret_2026"
@@ -73,16 +72,16 @@ jobs:
           mkdir -p app/src/main/assets
           mkdir -p build/payload_dex
 
-          # 1. Compile all release sources (Kotlin, KSP generated code, Java)
+          # Compile release sources
           ./gradlew compileReleaseSources
 
-          # 2. Locate Android D8 build tool and platform SDK
+          # Locate D8 and platform android.jar
           D8_TOOL=$(find $ANDROID_HOME/build-tools -name d8 | sort -V | tail -n 1)
           PLATFORM_JAR=$(find $ANDROID_HOME/platforms -name "android.jar" | sort -V | tail -n 1)
           echo "Found D8 Tool at: $D8_TOOL"
           echo "Found Platform JAR at: $PLATFORM_JAR"
 
-          # 3. Dynamically search all compiled release class files in app/build (excluding tests and StubApplication)
+          # Collect compiled class files
           CLASS_FILES=$(find app/build -type f -name "*.class" ! -name "StubApplication*" ! -path "*/test*" ! -path "*/androidTest*")
 
           if [ -z "$CLASS_FILES" ]; then
@@ -92,30 +91,29 @@ jobs:
 
           echo "Packaging $(echo "$CLASS_FILES" | wc -w) class files into payload DEX..."
 
-          # 4. Compile classes into standalone payload DEX
+          # Build DEX
           $D8_TOOL --lib "$PLATFORM_JAR" --release --output build/payload_dex $CLASS_FILES
 
-          # 5. Encrypt payload DEX with OpenSSL AES-256-CBC PBKDF2
+          # Encrypt DEX
           openssl enc -aes-256-cbc -salt -pbkdf2 \
             -in build/payload_dex/classes.dex \
             -out app/src/main/assets/payload.bin \
             -k "$PAYLOAD_PASSPHRASE"
 
-          # 6. Purge the unencrypted intermediate DEX file from runner storage
           rm -rf build/payload_dex
           echo "Payload DEX successfully encrypted into app/src/main/assets/payload.bin"
 
-      # FIX 3: Aligned the environment variables to match exactly what your build.gradle.kts expects
-      # Added KEY_ALIAS env variable with 'fastgit' as the fallback to align with the build script
+      # 7. Build Signed Release APK (Passing all Keystore credentials to Gradle)
       - name: Build Release APK
         run: ./gradlew assembleRelease
         env:
-          KEYSTORE_PATH: ${{ github.workspace }}/safevoice.jks # Matches Gradle expect variables
-          STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD || vars.KEYSTORE_PASSWORD }} # Matches Gradle expect variables
-          KEY_PASSWORD:  ${{ secrets.KEY_PASSWORD || vars.KEY_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS || vars.KEY_ALIAS || 'fastgit' }}
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 || vars.KEYSTORE_BASE64 }}
+          KEYSTORE_PATH: ${{ github.workspace }}/safevoice.jks
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD || vars.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS || vars.KEY_ALIAS || 'bulk' }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD || vars.KEY_PASSWORD || secrets.KEYSTORE_PASSWORD || vars.KEYSTORE_PASSWORD }}
 
-      # FIX 4: Use a wildcard match for the path so the upload does not fail if your file is named differently
+      # 8. Upload Artifact
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
