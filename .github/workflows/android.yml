@@ -67,7 +67,7 @@ jobs:
       # 6. Payload DEX Compilation and AES-256 Encryption
       - name: Build and Encrypt Core Payload
         env:
-          PAYLOAD_PASSPHRASE: "FastGit_Master_Secret_2026"
+          PAYLOAD_PASSPHRASE: "Bulk_Master_Secret_2026"
         run: |
           mkdir -p app/src/main/assets
           mkdir -p build/payload_dex
