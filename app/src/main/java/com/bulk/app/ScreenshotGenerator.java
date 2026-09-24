@@ -43,14 +43,6 @@ public class ScreenshotGenerator {
             return;
         }
 
-        if (listener != null) {
-            listener.onStart(totalFiles);
-        }
-
-        final AtomicInteger completedCount = new AtomicInteger(0);
-        final AtomicInteger successCount = new AtomicInteger(0);
-        final List<Uri> savedUris = Collections.synchronizedList(new ArrayList<>());
-
         // Retrieve settings values once on start
         final int linesPerChunk = settingsManager.getLinesPerChunk();
         final int fontSize = settingsManager.getFontSize();
@@ -58,6 +50,17 @@ public class ScreenshotGenerator {
         final int targetWidth = settingsManager.getTargetWidth();
         final String folderPrefix = settingsManager.getFolderPrefix();
         final int jpegQuality = settingsManager.getJpegQuality();
+
+        // Clean any leftover chunk report .txt files from the destination directory
+        LogReportManager.cleanOldLogs(context, folderPrefix);
+
+        if (listener != null) {
+            listener.onStart(totalFiles);
+        }
+
+        final AtomicInteger completedCount = new AtomicInteger(0);
+        final AtomicInteger successCount = new AtomicInteger(0);
+        final List<Uri> savedUris = Collections.synchronizedList(new ArrayList<>());
 
         for (final Uri uri : fileUris) {
             FileProcessor processor = new FileProcessor(
