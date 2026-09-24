@@ -15,7 +15,7 @@ import java.io.OutputStream;
 public class StorageHelper {
 
     /**
-     * Creates a file entry (URI) for the ZIP file in /Pictures/BulkScreenshotSplitter/{folderPrefix}/
+     * Creates a file entry (URI) for the ZIP file in /Documents/BulkScreenshotSplitter/{folderPrefix}/
      * Returns the Uri of the created file.
      */
     public static Uri createZipFileUri(Context context, String zipFileName, String folderPrefix) throws IOException {
@@ -31,7 +31,8 @@ public class StorageHelper {
             ContentValues values = new ContentValues();
             values.put(MediaStore.MediaColumns.DISPLAY_NAME, zipFileName);
             values.put(MediaStore.MediaColumns.MIME_TYPE, "application/zip");
-            values.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/BulkScreenshotSplitter/" + sanitizedPrefixFolder);
+            // Use DIRECTORY_DOCUMENTS to allow general files under content://media/external/file
+            values.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOCUMENTS + "/BulkScreenshotSplitter/" + sanitizedPrefixFolder);
 
             // Accessing public folders for files is done via MediaStore.Files on API 29+
             Uri externalUri = MediaStore.Files.getContentUri("external");
@@ -41,9 +42,9 @@ public class StorageHelper {
             }
             return fileUri;
         } else {
-            // Android 9 and below: Use legacy java.io.File directly
-            File picturesDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
-            File targetDir = new File(picturesDir, "BulkScreenshotSplitter/" + sanitizedPrefixFolder);
+            // Android 9 and below: Use legacy java.io.File directly inside Documents
+            File documentsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS);
+            File targetDir = new File(documentsDir, "BulkScreenshotSplitter/" + sanitizedPrefixFolder);
             
             if (!targetDir.exists()) {
                 if (!targetDir.mkdirs()) {
@@ -91,7 +92,7 @@ public class StorageHelper {
     }
 
     /**
-     * Saves the byte array of a ZIP file into /Pictures/BulkScreenshotSplitter/{folderPrefix}/
+     * Saves the byte array of a ZIP file into /Documents/BulkScreenshotSplitter/{folderPrefix}/
      * Returns the Uri of the saved file.
      */
     public static Uri saveZipFile(Context context, String zipFileName, String folderPrefix, byte[] zipData) throws IOException {
