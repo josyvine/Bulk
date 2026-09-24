@@ -12,6 +12,8 @@ public class SettingsManager {
     private static final String KEY_FOLDER_PREFIX = "folder_prefix";
     private static final String KEY_JPEG_QUALITY = "jpeg_quality";
 
+    private static final String DEFAULT_FOLDER_PREFIX = "bulk_screenshot";
+
     private final SharedPreferences prefs;
 
     public SettingsManager(Context context) {
@@ -23,7 +25,7 @@ public class SettingsManager {
     }
 
     public void setLinesPerChunk(int lines) {
-        prefs.edit().putInt(KEY_LINES_PER_CHUNK, lines).apply();
+        prefs.edit().putInt(KEY_LINES_PER_CHUNK, Math.max(1, lines)).apply();
     }
 
     public int getFontSize() {
@@ -31,7 +33,7 @@ public class SettingsManager {
     }
 
     public void setFontSize(int size) {
-        prefs.edit().putInt(KEY_FONT_SIZE, size).apply();
+        prefs.edit().putInt(KEY_FONT_SIZE, Math.max(6, size)).apply();
     }
 
     public String getOutputFormat() {
@@ -47,16 +49,25 @@ public class SettingsManager {
     }
 
     public void setTargetWidth(int width) {
-        prefs.edit().putInt(KEY_TARGET_WIDTH, width).apply();
+        prefs.edit().putInt(KEY_TARGET_WIDTH, Math.max(320, width)).apply();
     }
 
     public String getFolderPrefix() {
-        return prefs.getString(KEY_FOLDER_PREFIX, "bulk screenshot");
+        String prefix = prefs.getString(KEY_FOLDER_PREFIX, DEFAULT_FOLDER_PREFIX);
+        if (prefix == null || prefix.trim().isEmpty()) {
+            return DEFAULT_FOLDER_PREFIX;
+        }
+        return prefix.trim();
     }
 
     public void setFolderPrefix(String prefix) {
         if (prefix == null || prefix.trim().isEmpty()) {
-            prefix = "bulk screenshot";
+            prefix = DEFAULT_FOLDER_PREFIX;
+        }
+        // Sanitize path separators to prevent illegal relative subpaths
+        prefix = prefix.replaceAll("[/\\\\:*?\"<>|]", "_").trim();
+        if (prefix.isEmpty()) {
+            prefix = DEFAULT_FOLDER_PREFIX;
         }
         prefs.edit().putString(KEY_FOLDER_PREFIX, prefix).apply();
     }
@@ -66,6 +77,8 @@ public class SettingsManager {
     }
 
     public void setJpegQuality(int quality) {
-        prefs.edit().putInt(KEY_JPEG_QUALITY, quality).apply();
+        // Enforce safe bounds between 10% and 100%
+        int clamped = Math.max(10, Math.min(100, quality));
+        prefs.edit().putInt(KEY_JPEG_QUALITY, clamped).apply();
     }
 }
