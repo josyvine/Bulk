@@ -33,8 +33,8 @@ public class LogReportManager {
 
             // 1. Clean using java.io.File (for API < 29 or with legacy storage enabled)
             try {
-                File picturesDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
-                File targetDir = new File(picturesDir, "BulkScreenshotSplitter/" + sanitizedPrefix);
+                File documentsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS);
+                File targetDir = new File(documentsDir, "BulkScreenshotSplitter/" + sanitizedPrefix);
                 if (targetDir.exists()) {
                     File[] files = targetDir.listFiles();
                     if (files != null) {
@@ -60,7 +60,7 @@ public class LogReportManager {
                     Uri externalUri = MediaStore.Files.getContentUri("external");
                     String selection = MediaStore.MediaColumns.RELATIVE_PATH + "=? AND " + MediaStore.MediaColumns.DISPLAY_NAME + " LIKE ?";
                     String[] selectionArgs = new String[] {
-                        Environment.DIRECTORY_PICTURES + "/BulkScreenshotSplitter/" + sanitizedPrefix + "/",
+                        Environment.DIRECTORY_DOCUMENTS + "/BulkScreenshotSplitter/" + sanitizedPrefix + "/",
                         "chunk_report_%.txt"
                     };
 
@@ -156,7 +156,7 @@ public class LogReportManager {
                 ContentValues values = new ContentValues();
                 values.put(MediaStore.MediaColumns.DISPLAY_NAME, reportFileName);
                 values.put(MediaStore.MediaColumns.MIME_TYPE, "text/plain");
-                values.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/BulkScreenshotSplitter/" + sanitizedPrefix);
+                values.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOCUMENTS + "/BulkScreenshotSplitter/" + sanitizedPrefix);
 
                 Uri externalUri = MediaStore.Files.getContentUri("external");
                 Uri fileUri = resolver.insert(externalUri, values);
@@ -171,8 +171,8 @@ public class LogReportManager {
                     Log.e(TAG, "Failed to insert MediaStore entry for " + reportFileName);
                 }
             } else {
-                File picturesDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
-                File targetDir = new File(picturesDir, "BulkScreenshotSplitter/" + sanitizedPrefix);
+                File documentsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS);
+                File targetDir = new File(documentsDir, "BulkScreenshotSplitter/" + sanitizedPrefix);
                 if (!targetDir.exists()) {
                     targetDir.mkdirs();
                 }
