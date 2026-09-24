@@ -22,6 +22,7 @@ public class LogReportManager {
 
     /**
      * Deletes log files in the public directory that are older than an hour.
+     * Also sweeps any leftover chunk_report_*.txt files.
      */
     public static void cleanOldLogs(Context context, String folderPrefix) {
         try {
@@ -40,11 +41,8 @@ public class LogReportManager {
                     if (files != null) {
                         for (File file : files) {
                             if (file.isFile() && file.getName().startsWith("chunk_report_") && file.getName().endsWith(".txt")) {
-                                long age = now - file.lastModified();
-                                if (age > ONE_HOUR_MS) {
-                                    boolean deleted = file.delete();
-                                    Log.d(TAG, "Deleted old log file (File API): " + file.getName() + " -> " + deleted);
-                                }
+                                boolean deleted = file.delete();
+                                Log.d(TAG, "Deleted old log file (File API): " + file.getName() + " -> " + deleted);
                             }
                         }
                     }
@@ -58,9 +56,9 @@ public class LogReportManager {
                 try {
                     ContentResolver resolver = context.getContentResolver();
                     Uri externalUri = MediaStore.Files.getContentUri("external");
-                    String selection = MediaStore.MediaColumns.RELATIVE_PATH + "=? AND " + MediaStore.MediaColumns.DISPLAY_NAME + " LIKE ?";
+                    String selection = MediaStore.MediaColumns.RELATIVE_PATH + " LIKE ? AND " + MediaStore.MediaColumns.DISPLAY_NAME + " LIKE ?";
                     String[] selectionArgs = new String[] {
-                        Environment.DIRECTORY_DOCUMENTS + "/BulkScreenshotSplitter/" + sanitizedPrefix + "/",
+                        "%" + Environment.DIRECTORY_DOCUMENTS + "/BulkScreenshotSplitter/" + sanitizedPrefix + "%",
                         "chunk_report_%.txt"
                     };
 
@@ -78,15 +76,10 @@ public class LogReportManager {
 
                             while (cursor.moveToNext()) {
                                 long id = cursor.getLong(idColumn);
-                                long dateModifiedSec = cursor.getLong(dateModifiedColumn);
                                 String displayName = cursor.getString(nameColumn);
-                                
-                                long ageMs = now - (dateModifiedSec * 1000L);
-                                if (ageMs > ONE_HOUR_MS) {
-                                    Uri fileUri = android.content.ContentUris.withAppendedId(externalUri, id);
-                                    int deletedRows = resolver.delete(fileUri, null, null);
-                                    Log.d(TAG, "Deleted old log file (MediaStore): " + displayName + " -> " + (deletedRows > 0));
-                                }
+                                Uri fileUri = android.content.ContentUris.withAppendedId(externalUri, id);
+                                int deletedRows = resolver.delete(fileUri, null, null);
+                                Log.d(TAG, "Deleted old log file (MediaStore): " + displayName + " -> " + (deletedRows > 0));
                             }
                         }
                     }
@@ -100,10 +93,10 @@ public class LogReportManager {
     }
 
     /**
-     * Saves a log report to the public directory.
+     * Saves a log report to system Logcat instead of creating public .txt files on the device.
      */
     public static void saveReport(Context context, String folderPrefix, String fileName, int chunkIndex, boolean isSuccess, String details, Throwable error) {
-        // Clean old logs first
+        // Clean old logs from storage first
         cleanOldLogs(context, folderPrefix);
 
         try {
@@ -151,38 +144,11 @@ public class LogReportManager {
             sb.append("========================================\n");
             String reportContent = sb.toString();
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                ContentResolver resolver = context.getContentResolver();
-                ContentValues values = new ContentValues();
-                values.put(MediaStore.MediaColumns.DISPLAY_NAME, reportFileName);
-                values.put(MediaStore.MediaColumns.MIME_TYPE, "text/plain");
-                values.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOCUMENTS + "/BulkScreenshotSplitter/" + sanitizedPrefix);
-
-                Uri externalUri = MediaStore.Files.getContentUri("external");
-                Uri fileUri = resolver.insert(externalUri, values);
-                if (fileUri != null) {
-                    try (java.io.OutputStream os = resolver.openOutputStream(fileUri);
-                         OutputStreamWriter osw = new OutputStreamWriter(os, StandardCharsets.UTF_8)) {
-                        osw.write(reportContent);
-                        osw.flush();
-                        Log.d(TAG, "Saved chunk report (MediaStore): " + fileUri.toString());
-                    }
-                } else {
-                    Log.e(TAG, "Failed to insert MediaStore entry for " + reportFileName);
-                }
+            // Print report strictly to Logcat so that NO .txt files are written to user storage
+            if (isSuccess) {
+                Log.d(TAG, reportContent);
             } else {
-                File documentsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS);
-                File targetDir = new File(documentsDir, "BulkScreenshotSplitter/" + sanitizedPrefix);
-                if (!targetDir.exists()) {
-                    targetDir.mkdirs();
-                }
-                File reportFile = new File(targetDir, reportFileName);
-                try (FileOutputStream fos = new FileOutputStream(reportFile);
-                     OutputStreamWriter osw = new OutputStreamWriter(fos, StandardCharsets.UTF_8)) {
-                    osw.write(reportContent);
-                    osw.flush();
-                    Log.d(TAG, "Saved chunk report (File API): " + reportFile.getAbsolutePath());
-                }
+                Log.e(TAG, reportContent, error);
             }
 
         } catch (Exception e) {
