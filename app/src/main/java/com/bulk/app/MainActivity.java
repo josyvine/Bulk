@@ -7,6 +7,7 @@ import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Debug;
 import android.os.Environment;
 import android.provider.DocumentsContract;
 import android.view.View;
@@ -96,6 +97,14 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // Active Anti-Debugging Guard: Terminate process immediately if debugger is attached to release build
+        if (!BuildConfig.DEBUG && (Debug.isDebuggerConnected() || Debug.waitingForDebugger())) {
+            finishAffinity();
+            System.exit(0);
+            return;
+        }
+
         setContentView(R.layout.activity_main);
 
         // Initialize Google Mobile Ads SDK
