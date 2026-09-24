@@ -24,12 +24,12 @@
 
     <!-- Explore Tab -->
     <string name="explore_guide_title">Bulk Screenshot Splitter Guide</string>
-    <string name="explore_guide_body">This app is designed to help you split large text files, log outputs, or code source files into multiple high-resolution screenshot images.\n\nTo avoid cluttering your gallery with hundreds of separate images, each file\'s screenshots are bundled directly into a compressed ZIP file.\n\nAll results are saved inside your device\'s public Pictures directory: /Pictures/BulkScreenshotSplitter/{FolderPrefix}/</string>
-    <string name="btn_open_pictures">Open Pictures Directory</string>
+    <string name="explore_guide_body">This app is designed to help you split large text files, log outputs, or code source files into multiple high-resolution screenshot images.\n\nTo avoid cluttering your storage with hundreds of separate images, each file\'s screenshots are bundled directly into a compressed ZIP file.\n\nAll results are saved inside your device\'s public Documents directory: /Documents/BulkScreenshotSplitter/{FolderPrefix}/</string>
+    <string name="btn_open_pictures">Open Documents Directory</string>
     
     <!-- Process Dialog -->
     <string name="progress_generating">Generating screenshots...</string>
-    <string name="progress_chunk">Chunk: %d / %d</string>
-    <string name="progress_overall">Overall: %d / %d files</string>
+    <string name="progress_chunk">Chunk: %1$d / %2$d</string>
+    <string name="progress_overall">Overall: %1$d / %2$d files</string>
     <string name="progress_current_file">File: %s</string>
 </resources>
