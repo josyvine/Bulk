@@ -1,0 +1,6 @@
+{
+  "name": "Bulk Screenshot Splitter",
+  "description": "Bulk text file to screenshot generator with ZIP compilation",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.MyApplication" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <!-- Primary brand color. -->
+        <item name="colorPrimary">@color/indigo_600</item>
+        <item name="colorPrimaryVariant">@color/slate_900</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <!-- Secondary brand color. -->
+        <item name="colorSecondary">@color/emerald_600</item>
+        <item name="colorSecondaryVariant">@color/emerald_600</item>
+        <item name="colorOnSecondary">@color/white</item>
+        <!-- Status bar color. -->
+        <item name="android:statusBarColor">@color/slate_900</item>
+        <!-- Window background -->
+        <item name="android:windowBackground">@color/slate_900</item>
+        
+        <!-- Bottom Nav View Customization -->
+        <item name="bottomNavigationStyle">@style/Widget.App.BottomNavigationView</item>
+    </style>
+
+    <style name="Widget.App.BottomNavigationView" parent="Widget.MaterialComponents.BottomNavigationView">
+        <item name="backgroundTint">@color/slate_800</item>
+        <item name="itemIconTint">@color/selector_nav_item</item>
+        <item name="itemTextColor">@color/selector_nav_item</item>
+    </style>
+</resources>
