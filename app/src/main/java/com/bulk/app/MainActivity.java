@@ -8,6 +8,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.provider.DocumentsContract;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.RadioButton;
@@ -66,7 +67,7 @@ public class MainActivity extends AppCompatActivity {
     private SeekBar sbJpegQuality;
 
     // UI components - Explore
-    private MaterialButton btnOpenPictures;
+    private MaterialButton btnOpenDocuments;
 
     // State list
     private final List<SelectedFile> selectedFiles = new ArrayList<>();
@@ -132,7 +133,7 @@ public class MainActivity extends AppCompatActivity {
         tvJpegQuality = findViewById(R.id.tv_jpeg_quality);
         sbJpegQuality = findViewById(R.id.sb_jpeg_quality);
 
-        btnOpenPictures = findViewById(R.id.btn_open_pictures);
+        btnOpenDocuments = findViewById(R.id.btn_open_pictures);
 
         BottomNavigationView bottomNavigation = findViewById(R.id.bottom_navigation);
 
@@ -176,7 +177,7 @@ public class MainActivity extends AppCompatActivity {
         btnGenerateScreenshots.setOnClickListener(v -> startScreenshotGeneration());
 
         // Setup Open Directory Button
-        btnOpenPictures.setOnClickListener(v -> openPicturesDirectory());
+        btnOpenDocuments.setOnClickListener(v -> openOutputDirectory());
 
         // Initialize and bind settings fields
         initSettingsFields();
@@ -385,8 +386,8 @@ public class MainActivity extends AppCompatActivity {
 
                         new MaterialAlertDialogBuilder(MainActivity.this)
                                 .setTitle("Generation Complete")
-                                .setMessage(String.format(Locale.US, "Successfully split and compressed %d file(s) inside /Pictures/BulkScreenshotSplitter/%s/", totalSuccessCount, settingsManager.getFolderPrefix()))
-                                .setPositiveButton("Open Directory", (dialog, which) -> openPicturesDirectory())
+                                .setMessage(String.format(Locale.US, "Successfully split and compressed %d file(s) inside /Documents/BulkScreenshotSplitter/%s/", totalSuccessCount, settingsManager.getFolderPrefix()))
+                                .setPositiveButton("Open Directory", (dialog, which) -> openOutputDirectory())
                                 .setNegativeButton("Done", (dialog, which) -> {
                                     // Reset Dashboard
                                     selectedFiles.clear();
@@ -408,39 +409,45 @@ public class MainActivity extends AppCompatActivity {
         generator.start();
     }
 
-    private void openPicturesDirectory() {
-        File folder = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), "BulkScreenshotSplitter");
+    private void openOutputDirectory() {
+        File folder = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), "BulkScreenshotSplitter");
         if (!folder.exists()) {
             folder.mkdirs();
         }
 
-        // Try to trigger system files provider UI directly in our subdirectory path
-        try {
-            Uri selectedUri = Uri.parse(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES).getPath() + "/BulkScreenshotSplitter");
-            Intent intent = new Intent(Intent.ACTION_VIEW);
-            intent.setDataAndType(selectedUri, "resource/folder");
-            if (intent.resolveActivity(getPackageManager()) != null) {
+        // Method 1: Use DocumentsContract to open the specific subfolder directly (Android 8.0+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            try {
+                Uri docUri = DocumentsContract.buildChildDocumentsUri(
+                        "com.android.externalstorage.documents",
+                        "primary:Documents/BulkScreenshotSplitter"
+                );
+                Intent intent = new Intent(Intent.ACTION_VIEW);
+                intent.setDataAndType(docUri, DocumentsContract.Document.MIME_TYPE_DIR);
+                intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
                 startActivity(intent);
                 return;
-            }
-        } catch (Exception ignored) {}
+            } catch (Exception ignored) {}
+        }
 
-        // Fallback: Open system file manager generally
+        // Method 2: Open system Documents UI
         try {
             Intent fallbackIntent = getPackageManager().getLaunchIntentForPackage("com.android.documentsui");
             if (fallbackIntent != null) {
+                fallbackIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 startActivity(fallbackIntent);
                 return;
             }
         } catch (Exception ignored) {}
 
-        // Alternative explicit file manager folder launch
+        // Method 3: Generic folder view intent
         try {
             Intent altIntent = new Intent(Intent.ACTION_VIEW);
-            altIntent.setDataAndType(Uri.fromFile(folder), "resource/folder");
+            altIntent.setDataAndType(Uri.parse(folder.getAbsolutePath()), "resource/folder");
+            altIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             startActivity(altIntent);
         } catch (Exception e) {
-            Toast.makeText(this, "Folder located inside Storage: Pictures/BulkScreenshotSplitter/", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "Files saved in: Documents/BulkScreenshotSplitter/" + settingsManager.getFolderPrefix() + "/", Toast.LENGTH_LONG).show();
         }
     }
 
