@@ -8,8 +8,8 @@ import android.net.Uri;
 import android.os.Handler;
 import android.os.Looper;
 import android.provider.OpenableColumns;
+import android.util.Log;
 import java.io.BufferedReader;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -20,6 +20,8 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 public class FileProcessor implements Runnable {
+
+    private static final String TAG = "FileProcessor";
 
     public interface FileProgressCallback {
         void onStart(String fileName);
@@ -92,7 +94,6 @@ public class FileProcessor implements Runnable {
             int totalChunks = (lineCount + linesPerChunk - 1) / linesPerChunk;
 
             // Prepare base zip filename
-            // Redmi_wife_debug_log.txt -> Redmi_wife_debug_log
             String baseName = originalFileName;
             int dotIndex = originalFileName.lastIndexOf('.');
             if (dotIndex >= 0) {
@@ -129,7 +130,7 @@ public class FileProcessor implements Runnable {
                                 jpegQuality
                         );
 
-                        // Zip entry naming: "Redmi_wife_debug_log chunks 1.jpg"
+                        // Zip entry naming: "fileName chunks 1.jpg"
                         String imageExt = outputFormat.equalsIgnoreCase("PNG") ? ".png" : ".jpg";
                         String entryName = sanitizedBaseName + " chunks " + (chunkIndex + 1) + imageExt;
 
@@ -146,28 +147,10 @@ public class FileProcessor implements Runnable {
 
                         bitmap.recycle(); // Recycle immediately to avoid OOM
 
-                        // Log successful chunk creation
-                        LogReportManager.saveReport(
-                            context,
-                            folderPrefix,
-                            originalFileName,
-                            chunkIndex + 1,
-                            true,
-                            "Successfully rendered and compressed chunk " + (chunkIndex + 1) + " with " + chunkLines.size() + " lines.",
-                            null
-                        );
+                        Log.d(TAG, "Rendered and compressed chunk " + (chunkIndex + 1) + "/" + totalChunks + " for " + originalFileName);
 
                     } catch (Throwable t) {
-                        // Log crash/error during chunk creation
-                        LogReportManager.saveReport(
-                            context,
-                            folderPrefix,
-                            originalFileName,
-                            chunkIndex + 1,
-                            false,
-                            "Crash/error during chunk " + (chunkIndex + 1) + " creation: " + (t.getMessage() != null ? t.getMessage() : t.toString()),
-                            t
-                        );
+                        Log.e(TAG, "Error rendering chunk " + (chunkIndex + 1) + " of " + originalFileName, t);
                         throw t;
                     }
                 }
@@ -181,16 +164,7 @@ public class FileProcessor implements Runnable {
             if (savedZipUri != null) {
                 StorageHelper.deleteFile(context, savedZipUri);
             }
-            // Log overall processing failure if not already logged at chunk level
-            LogReportManager.saveReport(
-                context,
-                folderPrefix,
-                originalFileName,
-                -1,
-                false,
-                "Process stopped due to an error: " + (t.getMessage() != null ? t.getMessage() : t.toString()),
-                t
-            );
+            Log.e(TAG, "Processing failed for " + originalFileName, t);
             postError(originalFileName, t.getMessage() != null ? t.getMessage() : t.toString());
         }
     }
